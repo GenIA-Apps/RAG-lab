@@ -1,98 +1,436 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# README — RAG Lab NestJS — Préparation entretien de naturalisation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Objectif du projet
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Ce projet implémente un système RAG (*Retrieval Augmented Generation*) en NestJS permettant de simuler un entretien de naturalisation française.
 
-## Description
+L’application :
+- exploite le **Livret du citoyen** (PDF officiel),
+- combine ce contexte documentaire avec un **profil candidat personnalisé**,
+- puis génère des questions contextualisées via un LLM.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+# Cas d’usage
 
-```bash
-$ npm install
+Le système simule un agent chargé d’un entretien de naturalisation.
+
+Le candidat fournit :
+- son pays de naissance,
+- sa ville de naissance,
+- son genre,
+- un contexte personnel libre.
+
+L’IA :
+1. recherche les passages pertinents du livret du citoyen,
+2. combine ces informations avec le profil candidat,
+3. génère une question réaliste et contextualisée.
+
+---
+
+# Architecture globale
+
+```txt
+Livret du citoyen PDF
+↓
+Extraction texte
+↓
+Cleaning
+↓
+Chunking
+↓
+Embeddings OpenAI
+↓
+Stockage Qdrant
+↓
+Recherche sémantique
+↓
+Injection contexte + profil candidat
+↓
+LLM
+↓
+Question personnalisée
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+# Technologies utilisées
 
-# watch mode
-$ npm run start:dev
+## Backend
+- NestJS
+- TypeScript
 
-# production mode
-$ npm run start:prod
+## IA
+- OpenAI API
+- Embeddings `text-embedding-3-small`
+- GPT-4.1-mini
+
+## Base vectorielle
+- Qdrant (Docker)
+
+## Parsing PDF
+- pdf-parse
+
+---
+
+# Concepts IA implémentés
+
+## 1. RAG (Retrieval Augmented Generation)
+
+Le modèle ne répond pas uniquement avec sa mémoire interne.
+
+Le système :
+1. récupère les documents pertinents,
+2. les injecte dans le prompt,
+3. puis le LLM répond avec ce contexte.
+
+---
+
+## 2. Embeddings
+
+Les embeddings transforment un texte en vecteur numérique.
+
+Exemple :
+
+```txt
+"La République française"
+↓
+[0.123, -0.882, 0.192, ...]
 ```
 
-## Run tests
+Ces vecteurs permettent :
+- la recherche sémantique,
+- la comparaison de sens,
+- le retrieval intelligent.
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+## 3. Cosine Similarity
 
-# test coverage
-$ npm run test:cov
+La similarité cosine compare l’orientation des vecteurs plutôt que leur taille.
+
+Elle permet de retrouver :
+- des textes proches sémantiquement,
+- même si les mots exacts diffèrent.
+
+---
+
+## 4. Chunking
+
+Le PDF est découpé en petits morceaux (“chunks”).
+
+Pourquoi ?
+- meilleure recherche sémantique,
+- limites de contexte des LLM,
+- granularité plus précise.
+
+Le système utilise :
+- chunk size : 1000 caractères
+- overlap : 200 caractères
+
+---
+
+## 5. Cleaning
+
+Le texte extrait du PDF est nettoyé :
+- suppression des retours ligne inutiles,
+- suppression des caractères parasites,
+- suppression des suites de points,
+- fusion des mots coupés.
+
+Objectif :
+- embeddings plus propres,
+- retrieval plus fiable.
+
+---
+
+# Structure du projet
+
+```txt
+src/
+  rag/
+    dto/
+      candidate-profile.dto.ts
+
+    chunker/
+      chunker.service.ts
+
+    embeddings/
+      embeddings.service.ts
+
+    pdf-loader/
+      pdf-loader.service.ts
+
+    qdrant/
+      qdrant.service.ts
+
+    text-cleaner/
+      text-cleaner.service.ts
+
+    rag.controller.ts
+    rag.service.ts
+    rag.module.ts
+
+  resources/
+    livret-citoyen.pdf
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+# Pipeline complet
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Étape 1 — Lecture du PDF
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+Le livret du citoyen est chargé depuis :
+
+```txt
+src/resources/livret-citoyen.pdf
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Le texte est extrait avec `pdf-parse`.
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+## Étape 2 — Cleaning
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Le texte est nettoyé :
+- suppression des caractères inutiles,
+- suppression des retours ligne parasites,
+- normalisation des espaces.
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Étape 3 — Chunking
 
-## Stay in touch
+Le texte est découpé en chunks avec overlap.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Exemple :
 
-## License
+```txt
+Chunk 1
+"... la République garantit la liberté ..."
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Chunk 2
+"... liberté d’expression et l’égalité ..."
+```
+
+---
+
+## Étape 4 — Embeddings
+
+Chaque chunk est envoyé au modèle OpenAI :
+
+```txt
+text-embedding-3-small
+```
+
+Chaque chunk devient un vecteur de dimension :
+
+```txt
+1536
+```
+
+---
+
+## Étape 5 — Stockage vectoriel
+
+Les embeddings sont stockés dans Qdrant.
+
+Chaque point contient :
+
+```ts
+{
+  id,
+  vector,
+  payload: {
+    text
+  }
+}
+```
+
+---
+
+## Étape 6 — Recherche sémantique
+
+Lorsqu’un utilisateur pose une question :
+1. la question est embedée ;
+2. Qdrant recherche les chunks les plus proches ;
+3. les chunks pertinents sont récupérés.
+
+---
+
+## Étape 7 — Génération IA
+
+Le prompt final contient :
+- le profil candidat,
+- le contexte du livret,
+- les chunks pertinents.
+
+Le LLM génère ensuite une question contextualisée.
+
+---
+
+# Docker — Qdrant
+
+## docker-compose.yml
+
+```yml
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-rag-lab
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:
+```
+
+## Lancement
+
+```bash
+docker compose up -d
+```
+
+Dashboard :
+
+```txt
+http://localhost:6333/dashboard
+```
+
+---
+
+# Endpoints disponibles
+
+## Health check
+
+```http
+GET /rag/health
+```
+
+---
+
+## Aperçu du PDF
+
+```http
+GET /rag/citizen-book/text
+```
+
+---
+
+## Aperçu nettoyage
+
+```http
+GET /rag/clean-preview
+```
+
+---
+
+## Chunks
+
+```http
+GET /rag/chunks
+```
+
+---
+
+## Test embeddings
+
+```http
+GET /rag/embedding-test
+```
+
+---
+
+## Indexation Qdrant
+
+```http
+POST /rag/index
+```
+
+---
+
+## Recherche sémantique
+
+```http
+GET /rag/search?query=...
+```
+
+---
+
+## Génération de question
+
+```http
+POST /rag/interview/question
+```
+
+Body :
+
+```json
+{
+  "birthCountry": "Maroc",
+  "birthCity": "Casablanca",
+  "gender": "homme",
+  "personalContext": "Je vis en France depuis 8 ans..."
+}
+```
+
+---
+
+# Ce que ce projet démontre
+
+Ce projet démontre :
+- compréhension du RAG,
+- architecture IA moderne,
+- intégration LLM,
+- recherche vectorielle,
+- backend NestJS structuré,
+- contextual prompting,
+- retrieval sémantique,
+- orchestration IA.
+
+---
+
+# Améliorations possibles
+
+## Backend
+- validation DTO
+- logging
+- monitoring
+- caching
+
+## IA
+- memory conversationnelle
+- multi-agent
+- re-ranking
+- guardrails
+- feedback automatique
+- scoring des réponses
+- citations précises
+- génération adaptive
+
+## Produit
+- frontend conversationnel
+- historique candidat
+- analytics
+- dashboard administrateur
+
+---
+
+# Concepts clés à maîtriser pour un entretien IA
+
+- RAG
+- embeddings
+- cosine similarity
+- vector databases
+- chunking
+- retrieval
+- hallucinations
+- prompt engineering
+- contextual AI
+- grounding
+- orchestration LLM
+- scalable AI architecture
