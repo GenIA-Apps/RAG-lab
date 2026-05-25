@@ -4,13 +4,13 @@ import { AppService } from './app.service';
 import { RagModule } from './rag/rag.module';
 import { ConfigModule } from '@nestjs/config';
 
-
 @Module({
-  imports: [    
+  imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    RagModule,],
+    RagModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

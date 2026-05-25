@@ -5,22 +5,23 @@ import { PDFParse } from 'pdf-parse';
 
 @Injectable()
 export class PdfLoaderService {
+  async loadCitizenBook(): Promise<string> {
+    const filePath = path.join(
+      process.cwd(),
+      'src',
+      'resources',
+      'livret_du_citoyen.pdf',
+    );
 
-    async loadCitizenBook() : Promise<string> {
-        const filePath = path.join(
-            process.cwd(), 
-            'src', 'resources', 'livret_du_citoyen.pdf'
-        );
+    const fileBuffer = fs.readFileSync(filePath);
+    const parser = new PDFParse({
+      data: fileBuffer,
+    });
 
-        const fileBuffer = fs.readFileSync(filePath);
-        const parser = new PDFParse({
-            data: fileBuffer
-        });
+    const result = await parser.getText();
 
-        const result = await parser.getText();
+    await parser.destroy();
 
-        await parser.destroy();
-
-        return result.text;    
-    }
+    return result.text;
+  }
 }

@@ -6,11 +6,18 @@ import { ChunkerService } from './chunker/chunker.service';
 import { EmbeddingsService } from './embeddings/embeddings.service';
 import { TextCleanerService } from './text-cleaner/text-cleaner.service';
 import { QdrantService } from './qdrant/qdrant.service';
+import { PromptLoaderService } from './prompt-loader/prompt-loader.service';
 
 @Module({
   controllers: [RagController],
-  providers: [RagService, PdfLoaderService, ChunkerService, EmbeddingsService, TextCleanerService, QdrantService]
+  providers: [
+    RagService,
+    PdfLoaderService,
+    ChunkerService,
+    EmbeddingsService,
+    TextCleanerService,
+    QdrantService,
+    PromptLoaderService,
+  ],
 })
-export class RagModule {
-  
-}
+export class RagModule {}
