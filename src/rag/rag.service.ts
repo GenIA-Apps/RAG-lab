@@ -20,7 +20,7 @@ export class RagService {
     private readonly textCleaner: TextCleanerService,
     private readonly embeddingsService: EmbeddingsService,
     private readonly qdrantService: QdrantService,
-    private readonly promptLoader: PromptLoaderService
+    private readonly promptLoader: PromptLoaderService,
   ) {}
 
   /**
@@ -45,17 +45,21 @@ export class RagService {
     return chunks;
   }
 
+  /**
+   * Ceci est un exemple de recherche vectoriel dans QDrant
+   */
   async search(query: string) {
-    const embedding = await this.embeddingsService.embedText(query);
-
-    const results = await this.qdrantService.searchSimilarChunks(embedding);
-
+    const results = await this.getPertinentChunksFromQuery(query);
     return results.map((result) => ({
       score: result.score,
       text: result.payload?.text,
     }));
   }
 
+  /**
+   * indexation du PDF en vecteur
+   * @returns 
+   */
   async indexCitizenBook() {
     const rawText = await this.pdfLoaderService.loadCitizenBook();
     const cleanText = this.textCleaner.clean(rawText);
@@ -67,37 +71,31 @@ export class RagService {
     return this.qdrantService.insertChunks(chunks, embeddings);
   }
 
-  async generateQuestionBasedOnTheme(theme : string, numberOfQuestion: Int8Array, profil: CandidateProfileDto) {
+  async generateQuestionBasedOnTheme(
+    theme: string,
+    numberOfQuestion: Int8Array,
+    profil: CandidateProfileDto,
+  ) {
     const embedding = await this.embeddingsService.embedText(theme);
     const results = await this.qdrantService.searchSimilarChunks(embedding);
     const context = results.map((result) => result.payload?.text).join('\n\n');
 
-    const prompt = this.promptLoader.loadPrompt('prompt_numbered_base_on_theme.txt', {
-      birthCountry: profil.birthCountry,
-      birthCity: profil.birthCity,
-      gender: profil.gender,
-      personalContext: profil.personalContext, 
-      context: context,
-      questionNumber: `${numberOfQuestion}`
-    })
+    const prompt = this.promptLoader.loadPrompt(
+      'prompt_numbered_base_on_theme.txt',
+      {
+        birthCountry: profil.birthCountry,
+        birthCity: profil.birthCity,
+        gender: profil.gender,
+        personalContext: profil.personalContext,
+        context: context,
+        questionNumber: `${numberOfQuestion}`,
+      },
+    );
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'Tu es un agent d’entretien de naturalisation française.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-    });
+    const completion = await this.callGpt(prompt);
 
     return {
-      question: completion.choices[0].message.content,
+      question: completion.choices[0].message.content?.split('|'),
       retrievedChunks: results.map((r) => ({
         score: r.score,
         preview: String(r.payload?.text).slice(0, 200),
@@ -115,21 +113,31 @@ export class RagService {
     ${dto.personalContext}
   `;
 
-    const embedding = await this.embeddingsService.embedText(searchQuery);
-
-    const results = await this.qdrantService.searchSimilarChunks(embedding, 3);
-
+    const results = await this.getPertinentChunksFromQuery(searchQuery);
     const context = results.map((result) => result.payload?.text).join('\n\n');
+    const prompt = this.promptLoader.loadPrompt(
+      'prompt_agent_random_question.txt', {
+        birthCountry: dto.birthCountry,
+        birthCity: dto.birthCity,
+        gender: dto.gender,
+        personalContext: dto.personalContext,
+        context: context,
+      },
+    );
 
-    const prompt = this.promptLoader.loadPrompt('prompt_agent_random_question.txt', {
-      birthCountry: dto.birthCountry,
-      birthCity: dto.birthCity,
-      gender: dto.gender,
-      personalContext: dto.personalContext, 
-      context: context
-    })
+    const completion = await this.callGpt(prompt);
 
-    const completion = await this.openai.chat.completions.create({
+    return {
+      question: completion.choices[0].message.content,
+      retrievedChunks: results.map((r) => ({
+        score: r.score,
+        preview: String(r.payload?.text).slice(0, 200),
+      })),
+    };
+  }
+
+  private async callGpt(prompt: string) {
+    return await this.openai.chat.completions.create({
       model: 'gpt-4.1-mini',
       messages: [
         {
@@ -143,13 +151,10 @@ export class RagService {
       ],
       temperature: 0.7,
     });
+  }
 
-    return {
-      question: completion.choices[0].message.content?.split('|'),
-      retrievedChunks: results.map((r) => ({
-        score: r.score,
-        preview: String(r.payload?.text).slice(0, 200),
-      })),
-    };
+  private async getPertinentChunksFromQuery(searchQuery) {
+    const embedding = await this.embeddingsService.embedText(searchQuery);
+    return await this.qdrantService.searchSimilarChunks(embedding, 3);
   }
 }
