@@ -6,8 +6,9 @@ import * as path from 'path';
 export class PromptLoaderService {
   loadPrompt(fileName: string, variables: Record<string, string>): string {
     const filePath = path.join(
-      process.cwd(),
-      'src',
+      __dirname,
+      '..',
+      '..',
       'resources',
       'prompts',
       fileName,
