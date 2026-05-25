@@ -7,8 +7,9 @@ import { PDFParse } from 'pdf-parse';
 export class PdfLoaderService {
   async loadCitizenBook(): Promise<string> {
     const filePath = path.join(
-      process.cwd(),
-      'src',
+      __dirname,
+      '..',
+      '..',
       'resources',
       'livret_du_citoyen.pdf',
     );
