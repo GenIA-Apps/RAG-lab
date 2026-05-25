@@ -4,7 +4,9 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 @Injectable()
 export class QdrantService implements OnModuleInit {
   private readonly client = new QdrantClient({
-    url: 'http://localhost:6333',
+    url: process.env.QDRANT_URL,
+    apiKey: process.env.QDRANT_TOKEN,
+    checkCompatibility: false,
   });
 
   private readonly collectionName = 'citizen_book';
