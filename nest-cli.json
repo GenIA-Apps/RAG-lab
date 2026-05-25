@@ -8,6 +8,10 @@
       {
         "include": "resources/**/*",
         "watchAssets": true
+      },
+      {
+        "include": "resources/prompts/**/*",
+        "watchAssets": true
       }
     ]
   }
